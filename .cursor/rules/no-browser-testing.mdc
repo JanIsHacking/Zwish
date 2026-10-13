@@ -1,0 +1,15 @@
+---
+description: Do not verify work in the browser; hand UI checks to the user
+alwaysApply: true
+---
+
+# No browser testing
+
+Do not open the app or use browser tools to check your work. This includes navigation, clicks, typing, screenshots, and DevTools.
+
+This overrides any general instruction to verify UI in the browser before finishing.
+
+- Implement the change, then stop.
+- For UI, layout, styling, routing, client state, or rendered data, tell the user what changed and what to look at. Ask them to check it and request corrections.
+- Do not declare that UI work verified, and do not keep iterating from what you see in a browser.
+- Checks that do not use a browser (unit tests, API calls, logs) are still fine when they fit the task.

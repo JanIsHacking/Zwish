@@ -1,0 +1,15 @@
+---
+description: Do not rebuild Docker containers; hand rebuilds to the user
+alwaysApply: true
+---
+
+# No container rebuilds
+
+Do not rebuild or restart Docker containers at any point. Other agents edit this repo in parallel, and an incomplete tree will crash the build.
+
+This overrides the rebuild step in the Docker-only rule and any general instruction to verify by running the app.
+
+- Implement the change, then stop.
+- Report what you changed. Ask the user to rebuild from the repo root with `docker compose up -d --build`, inspect the result, and request corrections if needed.
+- Do not run `docker compose up`, `docker compose build`, `docker compose restart`, `docker build`, or any other image or container rebuild yourself.
+- Checks that do not start or rebuild containers (unit tests, static review) are still fine when they fit the task.

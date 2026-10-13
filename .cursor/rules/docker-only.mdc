@@ -1,0 +1,11 @@
+---
+description: Run Zwish only through Docker Compose
+alwaysApply: true
+---
+
+# Docker only
+
+The app runs in Docker. Do not start the API, Vite, or Postgres in a terminal, and do not rebuild containers yourself. See the no-container-rebuilds rule.
+
+- The UI is https://localhost. The API listens inside the `api` container. Do not run `pnpm start:dev`, `pnpm dev`, or a second Vite server.
+- Postgres is the `postgres` service. Schema changes ship in the image; the API container runs `prisma migrate deploy` on start. Do not start another database or apply migrations from the host.

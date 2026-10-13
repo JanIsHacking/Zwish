@@ -1,0 +1,272 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  passwordHash String   @map("password_hash")
+  role         String
+  ftpWatts     Float?   @map("ftp_watts")
+  hrZoneBounds Json?    @map("hr_zone_bounds")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  bikes     Bike[]
+  plans     TrainingPlan[]
+  workouts  Workout[]
+  zoneTests ZoneTest[]
+  sessions  Session[]
+  setup     RiderSetup?
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Bike {
+  id                   String @id @default(uuid())
+  userId               String @map("user_id")
+  name                 String
+  wheelCircumferenceMm Int    @map("wheel_circumference_mm")
+  chainringTeeth       Int[]  @map("chainring_teeth")
+  cogTeeth             Int[]  @map("cog_teeth")
+  user                 User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workouts             Workout[]
+  pairings             TrainerBike[]
+  curves               PowerCurve[]
+  calibrations         CalibrationRun[]
+
+  @@map("bikes")
+}
+
+model Trainer {
+  id         String   @id @default(uuid())
+  name       String
+  deviceId   String?  @unique @map("device_id")
+  powerScale Float    @default(1) @map("power_scale")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  resistanceLevels ResistanceLevel[]
+  pairings         TrainerBike[]
+  curves           PowerCurve[]
+  calibrations     CalibrationRun[]
+  workouts         Workout[]
+  activations      TrainerActivation[]
+
+  @@map("trainers")
+}
+
+model TrainerBike {
+  id          String  @id @default(uuid())
+  trainerId   String  @map("trainer_id")
+  bikeId      String  @map("bike_id")
+  inertiaKgM2 Float?  @map("inertia_kg_m2")
+  trainer     Trainer @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  bike        Bike    @relation(fields: [bikeId], references: [id], onDelete: Cascade)
+
+  @@unique([trainerId, bikeId])
+  @@map("trainer_bikes")
+}
+
+model ResistanceLevel {
+  id        String  @id @default(uuid())
+  trainerId String  @map("trainer_id")
+  label     String
+  sortOrder Int     @map("sort_order")
+  trainer   Trainer @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@unique([trainerId, sortOrder])
+  @@map("resistance_levels")
+}
+
+model PowerCurve {
+  id                String   @id @default(uuid())
+  trainerId         String   @map("trainer_id")
+  bikeId            String   @map("bike_id")
+  resistanceLevelId String   @map("resistance_level_id")
+  knots             Json
+  coast             Json
+  fitKind           String   @map("fit_kind")
+  fitCoeffs         Json     @map("fit_coeffs")
+  tirePressureBar   Float    @map("tire_pressure_bar")
+  isActive          Boolean  @default(false) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  calibrationRunId  String?  @unique @map("calibration_run_id")
+  trainer           Trainer  @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  bike              Bike     @relation(fields: [bikeId], references: [id], onDelete: Cascade)
+  calibrationRun    CalibrationRun? @relation(fields: [calibrationRunId], references: [id])
+
+  @@index([trainerId, bikeId, resistanceLevelId, isActive])
+  @@map("power_curves")
+}
+
+model CalibrationRun {
+  id                String    @id @default(uuid())
+  trainerId         String    @map("trainer_id")
+  bikeId            String    @map("bike_id")
+  resistanceLevelId String    @map("resistance_level_id")
+  tirePressureBar   Float     @map("tire_pressure_bar")
+  targetRpm         Float     @map("target_rpm")
+  status            String
+  coastStartMonoUs  Float?    @map("coast_start_mono_us")
+  startedAt         DateTime  @default(now()) @map("started_at")
+  endedAt           DateTime? @map("ended_at")
+  samples           Json      @default("[]")
+  coast             Json      @default("[]")
+  fitKind           String?   @map("fit_kind")
+  fitCoeffs         Json?     @map("fit_coeffs")
+  trainer           Trainer   @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  bike              Bike      @relation(fields: [bikeId], references: [id], onDelete: Cascade)
+  curve             PowerCurve?
+
+  @@index([trainerId, status])
+  @@map("calibration_runs")
+}
+
+model TrainingPlan {
+  id       String        @id @default(uuid())
+  userId   String        @map("user_id")
+  name     String
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions PlanSession[]
+
+  @@map("training_plans")
+}
+
+model PlanSession {
+  id        String        @id @default(uuid())
+  planId    String        @map("plan_id")
+  weekIndex Int           @map("week_index")
+  dayOfWeek Int           @map("day_of_week")
+  name      String
+  plan      TrainingPlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+  segments  PlanSegment[]
+  workouts  Workout[]
+
+  @@map("plan_sessions")
+}
+
+model PlanSegment {
+  id              String      @id @default(uuid())
+  sessionId       String      @map("session_id")
+  sortOrder       Int         @map("sort_order")
+  durationSeconds Int         @map("duration_seconds")
+  targetKind      String      @map("target_kind")
+  zone            Int
+  notes           String?
+  session         PlanSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("plan_segments")
+}
+
+model Workout {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  trainerId         String    @map("trainer_id")
+  bikeId            String    @map("bike_id")
+  planSessionId     String?   @map("plan_session_id")
+  kind              String
+  status            String
+  startedAt         DateTime  @default(now()) @map("started_at")
+  endedAt           DateTime? @map("ended_at")
+  resistanceLevelId String?   @map("resistance_level_id")
+  chainringTeeth    Int?      @map("chainring_teeth")
+  cogTeeth          Int?      @map("cog_teeth")
+  distanceM          Float     @default(0) @map("distance_m")
+  avgPowerW          Float?    @map("avg_power_w")
+  avgCadenceRpm      Float?    @map("avg_cadence_rpm")
+  avgHrBpm           Float?    @map("avg_hr_bpm")
+  powerWeightedSum   Float     @default(0) @map("power_weighted_sum")
+  powerWeightSec     Float     @default(0) @map("power_weight_sec")
+  cadenceWeightedSum Float     @default(0) @map("cadence_weighted_sum")
+  cadenceWeightSec   Float     @default(0) @map("cadence_weight_sec")
+  hrWeightedSum      Float     @default(0) @map("hr_weighted_sum")
+  hrWeightSec        Float     @default(0) @map("hr_weight_sec")
+  estimatedFtp      Float?    @map("estimated_ftp")
+  zoneTestProtocol  String?   @map("zone_test_protocol")
+  zoneTestStartW    Float?    @map("zone_test_start_w")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trainer     Trainer      @relation(fields: [trainerId], references: [id], onDelete: Restrict)
+  bike        Bike         @relation(fields: [bikeId], references: [id], onDelete: Restrict)
+  planSession PlanSession? @relation(fields: [planSessionId], references: [id], onDelete: SetNull)
+  samples     WorkoutSample[]
+  zoneTest    ZoneTest?
+
+  @@index([userId, startedAt])
+  @@index([trainerId, status])
+  @@map("workouts")
+}
+
+model WorkoutSample {
+  id                String   @id @default(uuid())
+  workoutId         String   @map("workout_id")
+  recordedAt        DateTime @map("recorded_at")
+  wheelRpm          Float    @map("wheel_rpm")
+  powerW            Float?   @map("power_w")
+  cadenceRpm        Float?   @map("cadence_rpm")
+  hrBpm             Float?   @map("hr_bpm")
+  distanceM         Float    @map("distance_m")
+  speedMps          Float    @map("speed_mps")
+  resistanceLevelId String?  @map("resistance_level_id")
+  chainringTeeth    Int?     @map("chainring_teeth")
+  cogTeeth          Int?     @map("cog_teeth")
+  workout           Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@index([workoutId, recordedAt])
+  @@map("workout_samples")
+}
+
+model ZoneTest {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  workoutId    String   @unique @map("workout_id")
+  protocol     String
+  estimatedFtp Float    @map("estimated_ftp")
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workout      Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@map("zone_tests")
+}
+
+model TrainerActivation {
+  id         String   @id @default(uuid())
+  trainerId  String   @map("trainer_id")
+  seq        Int
+  monoUs     BigInt   @map("mono_us")
+  recordedAt DateTime @map("recorded_at")
+  revCount   Float    @map("rev_count")
+  dtUs       BigInt   @map("dt_us")
+  trainer    Trainer  @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@unique([trainerId, seq])
+  @@index([trainerId, recordedAt])
+  @@map("trainer_activations")
+}
+
+model RiderSetup {
+  userId            String  @id @map("user_id")
+  trainerId         String? @map("trainer_id")
+  bikeId            String? @map("bike_id")
+  resistanceLevelId String? @map("resistance_level_id")
+  chainringTeeth    Int?    @map("chainring_teeth")
+  cogTeeth          Int?    @map("cog_teeth")
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("rider_setups")
+}

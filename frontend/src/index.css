@@ -1,0 +1,41 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Geist', ui-sans-serif, sans-serif;
+  --font-display: 'Geist', ui-sans-serif, sans-serif;
+  --color-ink: #101114;
+  --color-panel: #181a20;
+  --color-panel-2: #23262e;
+  --color-line: #343844;
+  --color-paper: #f3f4f6;
+  --color-muted: #9aa1ad;
+  --color-signal: #e4f25a;
+  --color-ok: #7dbe9b;
+  --color-under: #8eb6ff;
+  --color-inzone: #c6f25a;
+  --color-over: #ff6a3d;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-sans);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.num {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
